@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import {
   Download,
+  Upload,
   Plus,
   Search,
   Car,
@@ -13,13 +14,12 @@ import {
   Pencil,
   Save,
   X,
-  Upload,
   CalendarDays,
   DollarSign,
 } from "lucide-react";
 import jsPDF from "jspdf";
 
-const STORAGE_KEY = "jpbr-auto-app-v1";
+const STORAGE_KEY = "jpbr-auto-app-mobile-final";
 
 const currency = new Intl.NumberFormat("pt-BR", {
   style: "currency",
@@ -60,19 +60,13 @@ function fileNameSafeDate() {
   return new Date().toISOString().slice(0, 10);
 }
 
-export default function App() {
+function App() {
   const fileInputRef = useRef(null);
 
   const [data, setData] = useState(initialData);
   const [tab, setTab] = useState("dashboard");
   const [searchPlate, setSearchPlate] = useState("");
   const [saveMessage, setSaveMessage] = useState("Dados salvos neste aparelho.");
-  const [reportFilter, setReportFilter] = useState({
-    startDate: todayISO(),
-    endDate: todayISO(),
-    clientId: "",
-    paid: "all",
-  });
 
   const [serviceForm, setServiceForm] = useState({ name: "", defaultPrice: "" });
 
@@ -99,6 +93,13 @@ export default function App() {
     value: "",
     paid: false,
     notes: "",
+  });
+
+  const [reportFilter, setReportFilter] = useState({
+    startDate: todayISO(),
+    endDate: todayISO(),
+    clientId: "",
+    paid: "all",
   });
 
   useEffect(() => {
@@ -131,9 +132,9 @@ export default function App() {
   );
 
   const filteredCars = useMemo(() => {
-    const plate = searchPlate.trim().toUpperCase();
-    if (!plate) return data.cars;
-    return data.cars.filter((c) => c.plate.toUpperCase().includes(plate));
+    const q = searchPlate.trim().toUpperCase();
+    if (!q) return data.cars;
+    return data.cars.filter((c) => c.plate.toUpperCase().includes(q));
   }, [data.cars, searchPlate]);
 
   const dashboardStats = useMemo(() => {
@@ -189,6 +190,7 @@ export default function App() {
     const client = data.clients.find((c) => c.id === launchForm.clientId);
     if (!client) return data.services;
     if (!client.pricing?.length) return data.services;
+
     return client.pricing
       .map((p) => data.services.find((s) => s.id === p.serviceId))
       .filter(Boolean);
@@ -211,6 +213,7 @@ export default function App() {
   function toggleClientPricing(serviceId) {
     setClientForm((prev) => {
       const exists = prev.pricing.find((p) => p.serviceId === serviceId);
+
       if (exists) {
         return {
           ...prev,
@@ -522,8 +525,8 @@ export default function App() {
         const wrapped = lines.flatMap((line) =>
           doc.splitTextToSize(line, pageWidth - margin * 2 - 16)
         );
-        const blockHeight = wrapped.length * 14 + 18;
 
+        const blockHeight = wrapped.length * 14 + 18;
         ensureSpace(blockHeight + 10);
 
         doc.setDrawColor(220, 226, 232);
@@ -595,539 +598,66 @@ export default function App() {
   ];
 
   return (
-    <div className="app-shell">
-      <style>{`
-        :root{
-          --bg:#f3f5f8;
-          --card:#ffffff;
-          --text:#0f172a;
-          --muted:#64748b;
-          --line:#e2e8f0;
-          --primary:#0f172a;
-          --primary-2:#1e293b;
-          --success:#047857;
-          --success-bg:#d1fae5;
-          --warning:#b45309;
-          --warning-bg:#fef3c7;
-          --soft:#f8fafc;
-          --shadow:0 10px 30px rgba(15,23,42,.08);
-          --radius:20px;
-        }
-        *{box-sizing:border-box}
-        html,body,#root{margin:0;padding:0;min-height:100%}
-        body{
-          font-family: Inter, Arial, sans-serif;
-          background:var(--bg);
-          color:var(--text);
-        }
-        button,input,select,textarea{font:inherit}
-        .app-shell{
-          min-height:100vh;
-          background:
-            radial-gradient(circle at top, rgba(15,23,42,.06), transparent 25%),
-            var(--bg);
-          padding-bottom:92px;
-        }
-        .container{
-          width:100%;
-          max-width:1180px;
-          margin:0 auto;
-          padding:16px;
-        }
-        .topbar{
-          display:flex;
-          flex-direction:column;
-          gap:14px;
-          margin-bottom:16px;
-        }
-        .hero{
-          background:linear-gradient(135deg, #0f172a, #1e293b);
-          color:#fff;
-          border-radius:28px;
-          padding:18px;
-          box-shadow:var(--shadow);
-        }
-        .hero h1{
-          margin:0 0 6px;
-          font-size:28px;
-          line-height:1.1;
-        }
-        .hero p{
-          margin:0;
-          color:rgba(255,255,255,.82);
-          line-height:1.45;
-        }
-        .save-chip{
-          margin-top:14px;
-          display:inline-flex;
-          align-items:center;
-          gap:8px;
-          border-radius:999px;
-          background:rgba(255,255,255,.12);
-          padding:8px 12px;
-          font-size:12px;
-          color:#e2e8f0;
-        }
-        .quick-actions{
-          display:grid;
-          grid-template-columns:1fr 1fr;
-          gap:10px;
-        }
-        .ghost-btn,.ghost-file-btn,.primary-btn,.soft-btn{
-          min-height:48px;
-          border:none;
-          border-radius:16px;
-          padding:12px 14px;
-          display:inline-flex;
-          align-items:center;
-          justify-content:center;
-          gap:10px;
-          font-weight:600;
-          cursor:pointer;
-          transition:.2s ease;
-        }
-        .ghost-btn,.ghost-file-btn{
-          background:#fff;
-          border:1px solid var(--line);
-          color:var(--text);
-          box-shadow:var(--shadow);
-        }
-        .primary-btn{
-          background:var(--primary);
-          color:#fff;
-          width:100%;
-        }
-        .soft-btn{
-          background:#fff;
-          color:var(--text);
-          border:1px solid var(--line);
-          width:100%;
-        }
-        .ghost-btn:active,.ghost-file-btn:active,.primary-btn:active,.soft-btn:active{
-          transform:scale(.98)
-        }
-        .hidden-input{display:none}
-        .section{
-          display:flex;
-          flex-direction:column;
-          gap:14px;
-        }
-        .section-head h2{
-          margin:0 0 6px;
-          font-size:22px;
-        }
-        .section-head p{
-          margin:0;
-          color:var(--muted);
-          line-height:1.5;
-        }
-        .stats-grid{
-          display:grid;
-          grid-template-columns:repeat(2,1fr);
-          gap:12px;
-        }
-        .stat-card,.card{
-          background:var(--card);
-          border:1px solid var(--line);
-          border-radius:24px;
-          box-shadow:var(--shadow);
-        }
-        .stat-card{
-          padding:16px;
-        }
-        .stat-title{
-          color:var(--muted);
-          font-size:13px;
-        }
-        .stat-value{
-          margin-top:8px;
-          font-size:24px;
-          font-weight:800;
-          line-height:1.15;
-          word-break:break-word;
-        }
-        .card{
-          padding:16px;
-        }
-        .stack{
-          display:flex;
-          flex-direction:column;
-          gap:14px;
-        }
-        .grid-2,.grid-main,.report-grid{
-          display:grid;
-          gap:14px;
-        }
-        .field label{
-          display:block;
-          margin-bottom:6px;
-          font-size:13px;
-          font-weight:700;
-        }
-        .input,.select,.textarea,.readonly{
-          width:100%;
-          min-height:48px;
-          border-radius:16px;
-          border:1px solid var(--line);
-          background:#fff;
-          padding:12px 14px;
-          color:var(--text);
-          outline:none;
-        }
-        .textarea{
-          min-height:96px;
-          resize:vertical;
-        }
-        .readonly{
-          display:flex;
-          align-items:center;
-          gap:10px;
-          background:var(--soft);
-        }
-        .search-box{
-          display:flex;
-          align-items:center;
-          gap:10px;
-          border:1px solid var(--line);
-          border-radius:16px;
-          padding:12px 14px;
-          background:#fff;
-        }
-        .search-box input{
-          border:none;
-          outline:none;
-          background:transparent;
-          width:100%;
-          font-size:16px;
-        }
-        .table-wrap{
-          overflow:auto;
-          border-radius:18px;
-          border:1px solid var(--line);
-        }
-        table{
-          width:100%;
-          min-width:640px;
-          border-collapse:collapse;
-          background:#fff;
-        }
-        th,td{
-          text-align:left;
-          padding:12px 14px;
-          border-bottom:1px solid var(--line);
-          font-size:14px;
-        }
-        th{color:var(--muted); font-weight:700}
-        tr:last-child td{border-bottom:none}
-        .list{
-          display:flex;
-          flex-direction:column;
-          gap:12px;
-        }
-        .list-card{
-          border:1px solid var(--line);
-          border-radius:20px;
-          padding:14px;
-          background:#fff;
-        }
-        .list-row{
-          display:flex;
-          flex-direction:column;
-          gap:12px;
-        }
-        .list-title{
-          font-weight:800;
-          line-height:1.35;
-        }
-        .list-subtitle,.muted{
-          color:var(--muted);
-          line-height:1.45;
-        }
-        .chip-row{
-          display:flex;
-          flex-wrap:wrap;
-          gap:8px;
-        }
-        .chip{
-          display:inline-flex;
-          align-items:center;
-          gap:6px;
-          padding:7px 10px;
-          border-radius:999px;
-          font-size:12px;
-          font-weight:700;
-          background:#eef2ff;
-          color:#1e293b;
-        }
-        .chip-dark{
-          background:var(--primary);
-          color:#fff;
-        }
-        .status-btn,.status-chip{
-          display:inline-flex;
-          align-items:center;
-          justify-content:center;
-          gap:8px;
-          border-radius:999px;
-          padding:10px 14px;
-          font-size:13px;
-          font-weight:700;
-          border:none;
-        }
-        .status-paid{
-          background:var(--success-bg);
-          color:var(--success);
-        }
-        .status-open{
-          background:var(--warning-bg);
-          color:var(--warning);
-        }
-        .banner-edit{
-          display:flex;
-          align-items:center;
-          justify-content:space-between;
-          gap:12px;
-          border-radius:18px;
-          padding:12px 14px;
-          background:#fff7ed;
-          color:#9a3412;
-          border:1px solid #fed7aa;
-          font-size:14px;
-        }
-        .checkbox-row{
-          display:flex;
-          align-items:center;
-          gap:10px;
-          font-size:14px;
-          font-weight:600;
-        }
-        .services-client-list{
-          display:flex;
-          flex-direction:column;
-          gap:10px;
-          border:1px solid var(--line);
-          border-radius:20px;
-          padding:12px;
-          background:var(--soft);
-        }
-        .service-price-card{
-          background:#fff;
-          border:1px solid var(--line);
-          border-radius:18px;
-          padding:12px;
-        }
-        .service-price-head{
-          display:flex;
-          justify-content:space-between;
-          align-items:flex-start;
-          gap:12px;
-          margin-bottom:8px;
-        }
-        .toolbar-mobile-note{
-          font-size:12px;
-          color:var(--muted);
-        }
-        .nav-desktop{
-          display:none;
-        }
-        .bottom-nav{
-          position:fixed;
-          left:0;
-          right:0;
-          bottom:0;
-          z-index:50;
-          padding:10px 12px calc(10px + env(safe-area-inset-bottom));
-          background:rgba(243,245,248,.92);
-          backdrop-filter:blur(14px);
-          border-top:1px solid rgba(148,163,184,.25);
-        }
-        .bottom-nav-inner{
-          max-width:1180px;
-          margin:0 auto;
-          background:#fff;
-          border:1px solid var(--line);
-          border-radius:22px;
-          box-shadow:var(--shadow);
-          display:grid;
-          grid-template-columns:repeat(6,1fr);
-          gap:4px;
-          padding:6px;
-        }
-        .nav-item{
-          border:none;
-          background:transparent;
-          border-radius:16px;
-          min-height:62px;
-          display:flex;
-          flex-direction:column;
-          align-items:center;
-          justify-content:center;
-          gap:6px;
-          color:var(--muted);
-          font-size:11px;
-          font-weight:700;
-          cursor:pointer;
-          padding:8px 4px;
-        }
-        .nav-item.active{
-          background:var(--primary);
-          color:#fff;
-        }
-        .two-actions{
-          display:grid;
-          gap:10px;
-        }
-        .empty{
-          border:1px dashed #cbd5e1;
-          border-radius:18px;
-          padding:18px;
-          text-align:center;
-          color:var(--muted);
-          background:#fff;
-        }
-        .header-actions{
-          display:flex;
-          flex-direction:column;
-          gap:10px;
-        }
-        @media (min-width: 768px){
-          .container{padding:22px}
-          .hero{padding:24px}
-          .quick-actions{
-            grid-template-columns:repeat(3, max-content);
-            justify-content:flex-start;
-          }
-          .stats-grid{
-            grid-template-columns:repeat(3,1fr);
-          }
-          .grid-main{
-            grid-template-columns:420px 1fr;
-          }
-          .grid-2{
-            grid-template-columns:460px 1fr;
-          }
-          .report-grid{
-            grid-template-columns:320px 1fr;
-          }
-          .list-row{
-            flex-direction:row;
-            align-items:center;
-            justify-content:space-between;
-          }
-          .two-actions{
-            grid-template-columns:1fr 1fr;
-          }
-        }
-        @media (min-width: 1024px){
-          .nav-desktop{
-            display:grid;
-            grid-template-columns:repeat(6,1fr);
-            gap:10px;
-            margin-bottom:18px;
-          }
-          .nav-desktop .nav-item{
-            background:#fff;
-            border:1px solid var(--line);
-            color:var(--text);
-            box-shadow:var(--shadow);
-            min-height:78px;
-            flex-direction:row;
-            justify-content:flex-start;
-            padding:14px 16px;
-            gap:10px;
-            font-size:14px;
-          }
-          .nav-desktop .nav-item.active{
-            background:var(--primary);
-            color:#fff;
-            border-color:var(--primary);
-          }
-          .bottom-nav{display:none}
-          .stats-grid{
-            grid-template-columns:repeat(6,1fr);
-          }
-        }
-      `}</style>
+    <div className="app">
+      <style>{styles}</style>
 
-      <div className="container">
-        <div className="topbar">
-          <div className="hero">
-            <h1>JP BR Auto</h1>
-            <p>Cadastro de clientes, carros, serviços, lançamentos e relatórios.</p>
-            <div className="save-chip">
-              <CheckCircle2 size={14} />
-              {saveMessage}
-            </div>
+      <header className="topbar">
+        <div className="topbar-card">
+          <div className="brand">JP BR Auto</div>
+          <div className="subtitle">
+            Cadastro de clientes, carros, serviços, lançamentos e relatórios.
           </div>
 
-          <div className="quick-actions">
-            <button type="button" className="ghost-btn" onClick={exportBackup}>
-              <Download size={18} />
-              Backup
-            </button>
-
-            <button
-              type="button"
-              className="ghost-file-btn"
-              onClick={() => fileInputRef.current?.click()}
-            >
-              <Upload size={18} />
-              Importar backup
-            </button>
-
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="application/json"
-              className="hidden-input"
-              onChange={importBackup}
-            />
+          <div className="save-badge">
+            <CheckCircle2 size={14} />
+            <span>{saveMessage}</span>
           </div>
         </div>
 
-        <div className="nav-desktop">
-          {tabs.map((item) => {
-            const Icon = item.icon;
-            const active = tab === item.key;
-            return (
-              <button
-                key={item.key}
-                type="button"
-                className={`nav-item ${active ? "active" : ""}`}
-                onClick={() => setTab(item.key)}
-              >
-                <Icon size={18} />
-                <span>{item.label}</span>
-              </button>
-            );
-          })}
-        </div>
+        <div className="top-actions">
+          <button type="button" className="secondary-btn" onClick={exportBackup}>
+            <Download size={18} />
+            Backup
+          </button>
 
+          <button
+            type="button"
+            className="secondary-btn"
+            onClick={() => fileInputRef.current?.click()}
+          >
+            <Upload size={18} />
+            Importar
+          </button>
+
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="application/json"
+            className="hidden"
+            onChange={importBackup}
+          />
+        </div>
+      </header>
+
+      <main className="container">
         {tab === "dashboard" && (
           <Section title="Visão geral" subtitle="Resumo rápido do dia e do financeiro.">
-            <motion.div
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="stats-grid"
-            >
-              <StatCard title="Clientes" value={dashboardStats.clients} />
-              <StatCard title="Carros" value={dashboardStats.cars} />
-              <StatCard title="Serviços" value={dashboardStats.services} />
-              <StatCard title="Hoje" value={currency.format(dashboardStats.today)} />
-              <StatCard title="Pago" value={currency.format(dashboardStats.totalPaid)} />
-              <StatCard title="Em aberto" value={currency.format(dashboardStats.totalOpen)} />
-            </motion.div>
+            <div className="stats-grid">
+              <StatCard title="Clientes" value={dashboardStats.clients} icon={<Users size={18} />} />
+              <StatCard title="Carros" value={dashboardStats.cars} icon={<Car size={18} />} />
+              <StatCard title="Serviços" value={dashboardStats.services} icon={<Wrench size={18} />} />
+              <StatCard title="Hoje" value={currency.format(dashboardStats.today)} icon={<CalendarDays size={18} />} />
+              <StatCard title="Pago" value={currency.format(dashboardStats.totalPaid)} icon={<CheckCircle2 size={18} />} />
+              <StatCard title="Em aberto" value={currency.format(dashboardStats.totalOpen)} icon={<DollarSign size={18} />} />
+            </div>
           </Section>
         )}
 
         {tab === "services" && (
-          <Section
-            title="Serviços"
-            subtitle="Cadastre os serviços prestados e seus valores padrão."
-          >
-            <div className="grid-main">
+          <Section title="Serviços" subtitle="Cadastre os serviços e seus valores padrão.">
+            <div className="layout-grid">
               <Card>
-                <form className="stack" onSubmit={addService}>
+                <form onSubmit={addService} className="stack">
                   <Input
                     label="Nome do serviço"
                     value={serviceForm.name}
@@ -1152,23 +682,18 @@ export default function App() {
               </Card>
 
               <Card>
-                <div className="table-wrap">
-                  <table>
-                    <thead>
-                      <tr>
-                        <th>Serviço</th>
-                        <th>Valor padrão</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {data.services.map((service) => (
-                        <tr key={service.id}>
-                          <td>{service.name}</td>
-                          <td>{currency.format(service.defaultPrice || 0)}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                <div className="mobile-list">
+                  {data.services.map((service) => (
+                    <div className="mobile-row" key={service.id}>
+                      <div>
+                        <div className="row-title">{service.name}</div>
+                        <div className="row-subtitle">Valor padrão</div>
+                      </div>
+                      <div className="row-value">
+                        {currency.format(service.defaultPrice || 0)}
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </Card>
             </div>
@@ -1178,13 +703,13 @@ export default function App() {
         {tab === "clients" && (
           <Section
             title="Clientes"
-            subtitle="Vincule valores personalizados por serviço para cada cliente."
+            subtitle="Defina valores personalizados por serviço para cada cliente."
           >
-            <div className="grid-2">
+            <div className="layout-grid wide">
               <Card>
-                <form className="stack" onSubmit={addClient}>
+                <form onSubmit={addClient} className="stack">
                   {clientForm.id && (
-                    <div className="banner-edit">
+                    <div className="edit-banner">
                       <span>Editando cliente e preços personalizados.</span>
                       <Save size={16} />
                     </div>
@@ -1207,13 +732,11 @@ export default function App() {
                   />
 
                   <div className="stack">
-                    <div style={{ fontWeight: 800, fontSize: 14 }}>
-                      Serviços vinculados ao cliente
-                    </div>
+                    <div className="section-mini-title">Serviços vinculados</div>
 
-                    <div className="services-client-list">
+                    <div className="service-box">
                       {data.services.length === 0 && (
-                        <div className="muted">Cadastre serviços primeiro.</div>
+                        <div className="empty-inline">Cadastre serviços primeiro.</div>
                       )}
 
                       {data.services.map((service) => {
@@ -1222,31 +745,33 @@ export default function App() {
                         );
 
                         return (
-                          <div key={service.id} className="service-price-card">
-                            <div className="service-price-head">
-                              <label className="checkbox-row">
+                          <div key={service.id} className="service-item">
+                            <div className="service-header">
+                              <label className="check-row">
                                 <input
                                   type="checkbox"
                                   checked={Boolean(selected)}
                                   onChange={() => toggleClientPricing(service.id)}
                                 />
-                                {service.name}
+                                <span>{service.name}</span>
                               </label>
-                              <span className="muted" style={{ fontSize: 12 }}>
+                              <span className="muted-small">
                                 Padrão: {currency.format(service.defaultPrice || 0)}
                               </span>
                             </div>
 
                             {selected && (
-                              <Input
-                                label="Valor para este cliente"
-                                type="number"
-                                step="0.01"
-                                value={selected.price}
-                                onChange={(e) =>
-                                  updateClientPrice(service.id, e.target.value)
-                                }
-                              />
+                              <div style={{ marginTop: 10 }}>
+                                <Input
+                                  label="Valor para este cliente"
+                                  type="number"
+                                  step="0.01"
+                                  value={selected.price}
+                                  onChange={(e) =>
+                                    updateClientPrice(service.id, e.target.value)
+                                  }
+                                />
+                              </div>
                             )}
                           </div>
                         );
@@ -1254,7 +779,7 @@ export default function App() {
                     </div>
                   </div>
 
-                  <div className="two-actions">
+                  <div className="action-grid">
                     <PrimaryButton>
                       {clientForm.id ? "Atualizar cliente" : "Salvar cliente"}
                     </PrimaryButton>
@@ -1262,7 +787,7 @@ export default function App() {
                     {clientForm.id && (
                       <button
                         type="button"
-                        className="soft-btn"
+                        className="secondary-btn"
                         onClick={resetClientForm}
                       >
                         <X size={16} />
@@ -1274,31 +799,30 @@ export default function App() {
               </Card>
 
               <Card>
-                <div className="list">
+                <div className="stack">
                   {data.clients.map((client) => (
-                    <div key={client.id} className="list-card">
-                      <div className="list-row">
+                    <div className="client-card" key={client.id}>
+                      <div className="client-top">
                         <div>
-                          <div className="list-title">{client.name}</div>
-                          <div className="list-subtitle">
+                          <div className="row-title">{client.name}</div>
+                          <div className="row-subtitle">
                             {client.phone || "Sem telefone"}
                           </div>
                         </div>
 
                         <button
                           type="button"
-                          className="soft-btn"
-                          style={{ width: "auto" }}
+                          className="chip-btn"
                           onClick={() => editClient(client)}
                         >
-                          <Pencil size={16} />
+                          <Pencil size={14} />
                           Editar
                         </button>
                       </div>
 
-                      <div className="chip-row" style={{ marginTop: 12 }}>
+                      <div className="chips">
                         {(client.pricing || []).map((pricing) => (
-                          <span key={pricing.serviceId} className="chip chip-dark">
+                          <span key={pricing.serviceId} className="chip dark">
                             {servicesById[pricing.serviceId]?.name} ·{" "}
                             {currency.format(pricing.price || 0)}
                           </span>
@@ -1316,13 +840,10 @@ export default function App() {
         )}
 
         {tab === "cars" && (
-          <Section
-            title="Carros"
-            subtitle="Cadastre veículos e vincule cada placa ao cliente correto."
-          >
-            <div className="grid-main">
+          <Section title="Carros" subtitle="Cadastre a placa e vincule ao cliente.">
+            <div className="layout-grid">
               <Card>
-                <form className="stack" onSubmit={addCar}>
+                <form onSubmit={addCar} className="stack">
                   <Input
                     label="Placa"
                     value={carForm.plate}
@@ -1363,38 +884,33 @@ export default function App() {
               </Card>
 
               <Card>
-                <div className="stack">
-                  <div className="search-box">
-                    <Search size={18} />
-                    <input
-                      value={searchPlate}
-                      onChange={(e) => setSearchPlate(e.target.value)}
-                      placeholder="Buscar por placa"
-                    />
-                  </div>
+                <div className="search-wrap">
+                  <Search size={18} />
+                  <input
+                    value={searchPlate}
+                    onChange={(e) => setSearchPlate(e.target.value)}
+                    placeholder="Buscar por placa"
+                    className="search-input"
+                  />
+                </div>
 
-                  <div className="table-wrap">
-                    <table>
-                      <thead>
-                        <tr>
-                          <th>Placa</th>
-                          <th>Modelo</th>
-                          <th>Cor</th>
-                          <th>Cliente</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {filteredCars.map((car) => (
-                          <tr key={car.id}>
-                            <td>{car.plate}</td>
-                            <td>{car.model || "-"}</td>
-                            <td>{car.color || "-"}</td>
-                            <td>{clientsById[car.clientId]?.name || "Sem cliente"}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
+                <div className="mobile-list">
+                  {filteredCars.map((car) => (
+                    <div className="mobile-row" key={car.id}>
+                      <div>
+                        <div className="row-title">{car.plate}</div>
+                        <div className="row-subtitle">
+                          {car.model || "-"} · {car.color || "-"}
+                        </div>
+                      </div>
+                      <div className="row-subtitle">
+                        {clientsById[car.clientId]?.name || "Sem cliente"}
+                      </div>
+                    </div>
+                  ))}
+                  {filteredCars.length === 0 && (
+                    <EmptyState text="Nenhum carro encontrado." />
+                  )}
                 </div>
               </Card>
             </div>
@@ -1404,11 +920,11 @@ export default function App() {
         {tab === "launches" && (
           <Section
             title="Lançamentos"
-            subtitle="Informe a placa, selecione o serviço e ajuste o valor se necessário."
+            subtitle="Informe a placa primeiro e confirme o serviço."
           >
-            <div className="grid-main">
+            <div className="layout-grid">
               <Card>
-                <form className="stack" onSubmit={addLaunch}>
+                <form onSubmit={addLaunch} className="stack">
                   <Input
                     label="Data"
                     type="date"
@@ -1458,16 +974,16 @@ export default function App() {
                   <div className="field">
                     <label>Observações</label>
                     <textarea
-                      className="textarea"
+                      rows={3}
                       value={launchForm.notes}
                       onChange={(e) =>
                         setLaunchForm((p) => ({ ...p, notes: e.target.value }))
                       }
-                      rows={3}
+                      className="textarea"
                     />
                   </div>
 
-                  <label className="checkbox-row">
+                  <label className="check-row">
                     <input
                       type="checkbox"
                       checked={launchForm.paid}
@@ -1475,7 +991,7 @@ export default function App() {
                         setLaunchForm((p) => ({ ...p, paid: e.target.checked }))
                       }
                     />
-                    Marcar como pago no lançamento
+                    <span>Marcar como pago no lançamento</span>
                   </label>
 
                   <PrimaryButton>Salvar lançamento</PrimaryButton>
@@ -1484,52 +1000,40 @@ export default function App() {
 
               <Card>
                 <div className="stack">
-                  <div>
-                    <div className="list-title">Últimos lançamentos</div>
-                    <div className="list-subtitle">
-                      Toque no status para marcar como pago ou em aberto.
-                    </div>
-                  </div>
-
-                  <div className="list">
-                    {data.launches.map((item) => (
-                      <div key={item.id} className="list-card">
-                        <div className="list-row">
-                          <div>
-                            <div className="list-title">
-                              {item.plate} ·{" "}
-                              {servicesById[item.serviceId]?.name || "Serviço"}
-                            </div>
-                            <div className="list-subtitle">
-                              {item.date} ·{" "}
-                              {clientsById[item.clientId]?.name || "Sem cliente"} ·{" "}
-                              {currency.format(item.value || 0)}
-                            </div>
-                            {item.notes && (
-                              <div className="muted" style={{ marginTop: 6 }}>
-                                {item.notes}
-                              </div>
-                            )}
+                  {data.launches.map((item) => (
+                    <div className="client-card" key={item.id}>
+                      <div className="client-top">
+                        <div>
+                          <div className="row-title">
+                            {item.plate} · {servicesById[item.serviceId]?.name || "Serviço"}
                           </div>
-
-                          <button
-                            type="button"
-                            onClick={() => togglePaid(item.id)}
-                            className={`status-btn ${
-                              item.paid ? "status-paid" : "status-open"
-                            }`}
-                          >
-                            <CheckCircle2 size={16} />
-                            {item.paid ? "Pago" : "Em aberto"}
-                          </button>
+                          <div className="row-subtitle">
+                            {item.date} ·{" "}
+                            {clientsById[item.clientId]?.name || "Sem cliente"} ·{" "}
+                            {currency.format(item.value || 0)}
+                          </div>
+                          {item.notes && (
+                            <div className="notes">{item.notes}</div>
+                          )}
                         </div>
-                      </div>
-                    ))}
 
-                    {data.launches.length === 0 && (
-                      <div className="empty">Nenhum lançamento cadastrado ainda.</div>
-                    )}
-                  </div>
+                        <button
+                          type="button"
+                          onClick={() => togglePaid(item.id)}
+                          className={`status-chip ${
+                            item.paid ? "paid" : "open"
+                          }`}
+                        >
+                          <CheckCircle2 size={15} />
+                          {item.paid ? "Pago" : "Em aberto"}
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+
+                  {data.launches.length === 0 && (
+                    <EmptyState text="Nenhum lançamento cadastrado ainda." />
+                  )}
                 </div>
               </Card>
             </div>
@@ -1555,7 +1059,6 @@ export default function App() {
                       }))
                     }
                   />
-
                   <Input
                     label="Data final"
                     type="date"
@@ -1567,7 +1070,6 @@ export default function App() {
                       }))
                     }
                   />
-
                   <Select
                     label="Cliente"
                     value={reportFilter.clientId}
@@ -1582,7 +1084,6 @@ export default function App() {
                       ...data.clients.map((c) => ({ value: c.id, label: c.name })),
                     ]}
                   />
-
                   <Select
                     label="Pagamento"
                     value={reportFilter.paid}
@@ -1595,7 +1096,6 @@ export default function App() {
                       { value: "open", label: "Somente em aberto" },
                     ]}
                   />
-
                   <PrimaryButton onClick={generateReportPdf} type="button">
                     <Download size={18} />
                     Gerar e compartilhar PDF
@@ -1604,52 +1104,42 @@ export default function App() {
               </Card>
 
               <div className="stack">
-                <div className="stats-grid" style={{ gridTemplateColumns: "repeat(2,1fr)" }}>
-                  <StatCard title="Lançamentos" value={reportSummary.count} />
-                  <StatCard title="Total" value={currency.format(reportSummary.total)} />
-                  <StatCard title="Pago" value={currency.format(reportSummary.paid)} />
-                  <StatCard title="Em aberto" value={currency.format(reportSummary.open)} />
+                <div className="stats-grid stats-report">
+                  <StatCard title="Lançamentos" value={reportSummary.count} icon={<FileText size={18} />} />
+                  <StatCard title="Total" value={currency.format(reportSummary.total)} icon={<DollarSign size={18} />} />
+                  <StatCard title="Pago" value={currency.format(reportSummary.paid)} icon={<CheckCircle2 size={18} />} />
+                  <StatCard title="Em aberto" value={currency.format(reportSummary.open)} icon={<CalendarDays size={18} />} />
                 </div>
 
                 <Card>
-                  <div className="table-wrap">
-                    <table>
-                      <thead>
-                        <tr>
-                          <th>Data</th>
-                          <th>Cliente</th>
-                          <th>Telefone</th>
-                          <th>Placa</th>
-                          <th>Serviço</th>
-                          <th>Valor</th>
-                          <th>Status</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {reportRows.map((item) => (
-                          <tr key={item.id}>
-                            <td>{item.date}</td>
-                            <td>{clientsById[item.clientId]?.name || "-"}</td>
-                            <td>{clientsById[item.clientId]?.phone || "-"}</td>
-                            <td>{item.plate}</td>
-                            <td>{servicesById[item.serviceId]?.name || "-"}</td>
-                            <td>{currency.format(item.value || 0)}</td>
-                            <td>
-                              <span
-                                className={`status-chip ${
-                                  item.paid ? "status-paid" : "status-open"
-                                }`}
-                              >
-                                {item.paid ? "Pago" : "Em aberto"}
-                              </span>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                  <div className="mobile-list">
+                    {reportRows.map((item) => (
+                      <div className="mobile-row" key={item.id}>
+                        <div>
+                          <div className="row-title">
+                            {item.date} · {item.plate}
+                          </div>
+                          <div className="row-subtitle">
+                            {clientsById[item.clientId]?.name || "-"} ·{" "}
+                            {servicesById[item.serviceId]?.name || "-"}
+                          </div>
+                        </div>
+
+                        <div className="right-block">
+                          <div className="row-value">
+                            {currency.format(item.value || 0)}
+                          </div>
+                          <span
+                            className={`status-chip small ${item.paid ? "paid" : "open"}`}
+                          >
+                            {item.paid ? "Pago" : "Aberto"}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
 
                     {reportRows.length === 0 && (
-                      <div className="empty">Nenhum resultado com os filtros escolhidos.</div>
+                      <EmptyState text="Nenhum resultado com os filtros escolhidos." />
                     )}
                   </div>
                 </Card>
@@ -1657,36 +1147,34 @@ export default function App() {
             </div>
           </Section>
         )}
-      </div>
+      </main>
 
-      <div className="bottom-nav">
-        <div className="bottom-nav-inner">
-          {tabs.map((item) => {
-            const Icon = item.icon;
-            const active = tab === item.key;
+      <nav className="bottom-nav">
+        {tabs.map((item) => {
+          const Icon = item.icon;
+          const active = tab === item.key;
 
-            return (
-              <button
-                key={item.key}
-                type="button"
-                className={`nav-item ${active ? "active" : ""}`}
-                onClick={() => setTab(item.key)}
-              >
-                <Icon size={18} />
-                <span>{item.label}</span>
-              </button>
-            );
-          })}
-        </div>
-      </div>
+          return (
+            <button
+              key={item.key}
+              type="button"
+              className={`bottom-item ${active ? "active" : ""}`}
+              onClick={() => setTab(item.key)}
+            >
+              <Icon size={18} />
+              <span>{item.label}</span>
+            </button>
+          );
+        })}
+      </nav>
     </div>
   );
 }
 
 function Section({ title, subtitle, children }) {
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 12 }}
+    <motion.section
+      initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       className="section"
     >
@@ -1695,7 +1183,7 @@ function Section({ title, subtitle, children }) {
         <p>{subtitle}</p>
       </div>
       {children}
-    </motion.div>
+    </motion.section>
   );
 }
 
@@ -1703,10 +1191,13 @@ function Card({ children }) {
   return <div className="card">{children}</div>;
 }
 
-function StatCard({ title, value }) {
+function StatCard({ title, value, icon }) {
   return (
     <div className="stat-card">
-      <div className="stat-title">{title}</div>
+      <div className="stat-head">
+        <span>{title}</span>
+        <div className="stat-icon">{icon}</div>
+      </div>
       <div className="stat-value">{value}</div>
     </div>
   );
@@ -1725,7 +1216,7 @@ function Select({ label, options, ...props }) {
   return (
     <div className="field">
       <label>{label}</label>
-      <select className="select" {...props}>
+      <select className="input" {...props}>
         {options.map((opt) => (
           <option key={opt.value} value={opt.value}>
             {opt.label}
@@ -1755,3 +1246,562 @@ function ReadOnlyField({ label, value }) {
     </div>
   );
 }
+
+function EmptyState({ text }) {
+  return <div className="empty">{text}</div>;
+}
+
+const styles = `
+:root{
+  --bg:#f3f5f9;
+  --card:#ffffff;
+  --text:#0f172a;
+  --muted:#64748b;
+  --line:#e2e8f0;
+  --primary:#0f172a;
+  --primary-soft:#1e293b;
+  --shadow:0 10px 24px rgba(15,23,42,.08);
+  --radius:22px;
+}
+*{box-sizing:border-box}
+html,body,#root{margin:0;min-height:100%}
+body{
+  font-family: Inter, Arial, sans-serif;
+  background:linear-gradient(180deg,#eef2f7 0%, #f5f7fb 100%);
+  color:var(--text);
+}
+button,input,select,textarea{font:inherit}
+.hidden{display:none}
+
+.app{
+  min-height:100vh;
+  padding-bottom:92px;
+}
+
+.topbar{
+  position:sticky;
+  top:0;
+  z-index:20;
+  backdrop-filter:blur(16px);
+  background:rgba(245,247,251,.88);
+  border-bottom:1px solid rgba(226,232,240,.85);
+  padding:14px;
+}
+
+.topbar-card{
+  background:linear-gradient(135deg,#0f172a 0%, #243042 100%);
+  border-radius:28px;
+  padding:18px;
+  color:#fff;
+  box-shadow:var(--shadow);
+}
+
+.brand{
+  font-size:30px;
+  font-weight:800;
+  line-height:1.05;
+  letter-spacing:-.02em;
+}
+
+.subtitle{
+  margin-top:6px;
+  color:rgba(255,255,255,.82);
+  line-height:1.45;
+  font-size:14px;
+}
+
+.save-badge{
+  margin-top:14px;
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  padding:10px 14px;
+  border-radius:999px;
+  background:rgba(255,255,255,.12);
+  color:#e5eefb;
+  font-size:12px;
+  font-weight:700;
+  max-width:100%;
+  white-space:normal;
+  line-height:1.35;
+}
+
+.top-actions{
+  margin-top:12px;
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:12px;
+}
+
+.container{
+  width:min(1100px,100%);
+  margin:0 auto;
+  padding:14px;
+}
+
+.section{
+  display:flex;
+  flex-direction:column;
+  gap:14px;
+  margin-bottom:18px;
+}
+
+.section-head h2{
+  margin:0;
+  font-size:22px;
+  line-height:1.1;
+}
+
+.section-head p{
+  margin:6px 0 0;
+  color:var(--muted);
+  line-height:1.5;
+  font-size:14px;
+}
+
+.stats-grid{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:12px;
+}
+
+.stats-report{
+  grid-template-columns:repeat(2,minmax(0,1fr));
+}
+
+.stat-card{
+  background:var(--card);
+  border:1px solid var(--line);
+  border-radius:24px;
+  padding:16px;
+  box-shadow:var(--shadow);
+  min-height:110px;
+}
+
+.stat-head{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:8px;
+  color:var(--muted);
+  font-size:13px;
+  font-weight:700;
+}
+
+.stat-icon{
+  width:34px;
+  height:34px;
+  border-radius:12px;
+  display:grid;
+  place-items:center;
+  background:#f1f5f9;
+  color:var(--primary);
+  flex:0 0 auto;
+}
+
+.stat-value{
+  margin-top:12px;
+  font-size:20px;
+  font-weight:800;
+  line-height:1.15;
+  word-break:break-word;
+}
+
+.card{
+  background:var(--card);
+  border:1px solid var(--line);
+  border-radius:26px;
+  padding:16px;
+  box-shadow:var(--shadow);
+}
+
+.layout-grid,
+.report-grid{
+  display:grid;
+  gap:14px;
+}
+
+.layout-grid.wide{
+  display:grid;
+  gap:14px;
+}
+
+.stack{
+  display:flex;
+  flex-direction:column;
+  gap:14px;
+}
+
+.field label{
+  display:block;
+  margin-bottom:6px;
+  font-size:13px;
+  font-weight:700;
+}
+
+.input,
+.textarea,
+.readonly,
+.search-input{
+  width:100%;
+  min-height:52px;
+  border:1px solid var(--line);
+  border-radius:18px;
+  background:#fff;
+  padding:12px 14px;
+  color:var(--text);
+  outline:none;
+  font-size:16px;
+}
+
+.textarea{
+  min-height:98px;
+  resize:vertical;
+}
+
+.readonly{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  background:#f8fafc;
+}
+
+.primary-btn,
+.secondary-btn,
+.chip-btn{
+  border:none;
+  border-radius:18px;
+  min-height:52px;
+  padding:12px 14px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+  font-weight:800;
+  cursor:pointer;
+}
+
+.primary-btn{
+  width:100%;
+  background:linear-gradient(135deg,#0b132f 0%, #0f172a 100%);
+  color:#fff;
+}
+
+.secondary-btn{
+  width:100%;
+  background:#fff;
+  border:1px solid var(--line);
+  color:var(--text);
+}
+
+.action-grid{
+  display:grid;
+  gap:10px;
+}
+
+.edit-banner{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:8px;
+  border:1px solid #fed7aa;
+  background:#fff7ed;
+  color:#9a3412;
+  border-radius:18px;
+  padding:12px 14px;
+  font-size:13px;
+  font-weight:700;
+}
+
+.section-mini-title{
+  font-size:14px;
+  font-weight:800;
+}
+
+.service-box{
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+  border:1px solid var(--line);
+  border-radius:20px;
+  padding:12px;
+  background:#f8fafc;
+}
+
+.service-item{
+  border:1px solid var(--line);
+  border-radius:18px;
+  padding:12px;
+  background:#fff;
+}
+
+.service-header{
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+}
+
+.check-row{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  font-size:14px;
+  font-weight:600;
+}
+
+.check-row input{
+  width:18px;
+  height:18px;
+  flex:0 0 auto;
+}
+
+.muted-small{
+  color:var(--muted);
+  font-size:12px;
+}
+
+.search-wrap{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  border:1px solid var(--line);
+  border-radius:18px;
+  padding:0 14px;
+  min-height:52px;
+  background:#fff;
+  margin-bottom:12px;
+}
+
+.search-input{
+  border:none;
+  background:transparent;
+  padding:0;
+}
+
+.mobile-list{
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+}
+
+.mobile-row{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:12px;
+  padding:14px;
+  border:1px solid var(--line);
+  border-radius:18px;
+  background:#fff;
+}
+
+.row-title{
+  font-size:15px;
+  font-weight:800;
+  line-height:1.35;
+}
+
+.row-subtitle{
+  margin-top:4px;
+  color:var(--muted);
+  font-size:13px;
+  line-height:1.45;
+}
+
+.row-value{
+  font-size:15px;
+  font-weight:800;
+  text-align:right;
+}
+
+.client-card{
+  padding:14px;
+  border:1px solid var(--line);
+  border-radius:20px;
+  background:#fff;
+}
+
+.client-top{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:10px;
+}
+
+.chips{
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+  margin-top:12px;
+}
+
+.chip{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  padding:8px 10px;
+  border-radius:999px;
+  background:#eef2ff;
+  color:#1e293b;
+  font-size:12px;
+  font-weight:700;
+}
+
+.chip.dark{
+  background:#0f172a;
+  color:#fff;
+}
+
+.chip-btn{
+  min-height:36px;
+  padding:0 12px;
+  border-radius:999px;
+  background:#fff;
+  border:1px solid var(--line);
+  font-size:12px;
+}
+
+.notes{
+  margin-top:8px;
+  color:var(--muted);
+  font-size:13px;
+  line-height:1.45;
+}
+
+.status-chip{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  border:none;
+  border-radius:999px;
+  padding:9px 12px;
+  font-size:12px;
+  font-weight:800;
+  white-space:nowrap;
+}
+
+.status-chip.paid{
+  background:#dcfce7;
+  color:#166534;
+}
+
+.status-chip.open{
+  background:#fef3c7;
+  color:#92400e;
+}
+
+.status-chip.small{
+  padding:6px 10px;
+  font-size:11px;
+}
+
+.right-block{
+  display:flex;
+  flex-direction:column;
+  align-items:flex-end;
+  gap:6px;
+}
+
+.empty,
+.empty-inline{
+  border:1px dashed #cbd5e1;
+  border-radius:18px;
+  padding:18px;
+  text-align:center;
+  color:var(--muted);
+  background:#fff;
+  line-height:1.45;
+}
+
+.bottom-nav{
+  position:fixed;
+  left:0;
+  right:0;
+  bottom:0;
+  z-index:30;
+  display:grid;
+  grid-template-columns:repeat(6,1fr);
+  gap:6px;
+  padding:10px 10px calc(10px + env(safe-area-inset-bottom));
+  background:rgba(255,255,255,.94);
+  backdrop-filter:blur(14px);
+  border-top:1px solid rgba(226,232,240,.9);
+}
+
+.bottom-item{
+  border:none;
+  background:transparent;
+  border-radius:18px;
+  min-height:64px;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:6px;
+  color:var(--muted);
+  font-size:11px;
+  font-weight:800;
+  padding:8px 4px;
+}
+
+.bottom-item.active{
+  background:#0f172a;
+  color:#fff;
+}
+
+@media (min-width: 768px){
+  .topbar{
+    padding:18px 18px 12px;
+  }
+
+  .top-actions{
+    max-width:420px;
+  }
+
+  .layout-grid{
+    grid-template-columns:380px 1fr;
+  }
+
+  .layout-grid.wide{
+    grid-template-columns:430px 1fr;
+  }
+
+  .report-grid{
+    grid-template-columns:320px 1fr;
+  }
+
+  .stats-grid{
+    grid-template-columns:repeat(3,minmax(0,1fr));
+  }
+
+  .stats-report{
+    grid-template-columns:repeat(4,minmax(0,1fr));
+  }
+
+  .action-grid{
+    grid-template-columns:1fr 1fr;
+  }
+}
+
+@media (min-width: 1024px){
+  .container{
+    padding:20px;
+  }
+
+  .stats-grid{
+    grid-template-columns:repeat(6,minmax(0,1fr));
+  }
+
+  .bottom-nav{
+    left:50%;
+    transform:translateX(-50%);
+    max-width:760px;
+    bottom:14px;
+    border:1px solid var(--line);
+    border-radius:26px;
+    box-shadow:var(--shadow);
+  }
+}
+`;
+
+export default App;
