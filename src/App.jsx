@@ -8,7 +8,7 @@ const STORAGE_KEY = "jpbr-auto-app-v1";
 
 const currency = new Intl.NumberFormat("pt-BR", {
   style: "currency",
-  currency: "USD",
+  currency: "USD", 
 });
 
 const todayISO = () => new Date().toISOString().slice(0, 10);
